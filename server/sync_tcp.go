@@ -6,7 +6,7 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/redislite/core/config"
+	"github.com/redix/config"
 )
 
 func readCommand(c net.Conn) (string, error) {

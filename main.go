@@ -4,8 +4,8 @@ import (
 	"flag"
 	"log"
 
-	"github.com/redislite/core/config"
-	"github.com/redislite/core/server"
+	"github.com/redix/config"
+	"github.com/redix/server"
 )
 
 func setupFlags() {

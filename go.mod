@@ -1,3 +1,3 @@
-module github.com/redislite/core
+module github.com/redix
 
 go 1.23.12
