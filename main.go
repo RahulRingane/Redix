@@ -17,5 +17,5 @@ func setupFlags() {
 func main() {
 	setupFlags()
 	log.Println("starting the database server")
-	server.RunSyncTCPServer()
+	server.RunAsyncTCPServer()
 }
