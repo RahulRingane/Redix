@@ -1,74 +1,84 @@
 package server
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/redix/config"
+	"github.com/redix/core"
 )
 
-func readCommand(c net.Conn) (string, error) {
-	//TODO: Max read in one shot is 512 bytes
-	//To allow input > 512 bytes, then repeated read until
-	//We get EOF or designated delimiter
-
+func readCommand(c net.Conn) (*core.RedisCmd, error) {
+	// TODO: Max read in one shot is 512 bytes
+	// To allow input > 512 bytes, then repeated read until
+	// we get EOF or designated delimiter
 	var buf []byte = make([]byte, 512)
 	n, err := c.Read(buf[:])
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(buf[:n]), nil
+
+	tokens, err := core.DecodeArrayString(buf[:n])
+	if err != nil {
+		return nil, err
+	}
+
+	return &core.RedisCmd{
+		Cmd:  strings.ToUpper(tokens[0]),
+		Args: tokens[1:],
+	}, nil
 }
 
-func respond(cmd string, c net.Conn) error {
-	if _, err := c.Write([]byte(cmd)); err != nil {
-		return err
+func respondError(err error, c net.Conn) {
+	c.Write([]byte(fmt.Sprintf("-%s\r\n", err)))
+}
+
+func respond(cmd *core.RedisCmd, c net.Conn) {
+	err := core.EvalAndRespond(cmd, c)
+	if err != nil {
+		respondError(err, c)
 	}
-	return nil
 }
 
 func RunSyncTCPServer() {
-	log.Println("starting a synchronus TCP server on", config.Host, config.Port)
+	log.Println("starting a synchronous TCP server on", config.Host, config.Port)
 
 	var con_clients int = 0
 
-	//listening to the configured host:port
+	// listening to the configured host:port
 	lsnr, err := net.Listen("tcp", config.Host+":"+strconv.Itoa(config.Port))
 	if err != nil {
 		panic(err)
 	}
 
 	for {
-		//blocking call: waiting for the new clinet to connect
+		// blocking call: waiting for the new client to connect
 		c, err := lsnr.Accept()
 		if err != nil {
 			panic(err)
 		}
 
-		//increment the number of concurrent clients
+		// increment the number of concurrent clients
 		con_clients += 1
-		log.Println("clint connected with address:", c.RemoteAddr(), "concurrent clients", con_clients)
+		log.Println("client connected with address:", c.RemoteAddr(), "concurrent clients", con_clients)
 
 		for {
-			//over the socket, continously read the command and print it out
+			// over the socket, continuously read the command and print it out
 			cmd, err := readCommand(c)
 			if err != nil {
 				c.Close()
 				con_clients -= 1
-				log.Println("client disconnected", c.RemoteAddr(), "concurrent clinets", con_clients)
+				log.Println("client disconnected", c.RemoteAddr(), "concurrent clients", con_clients)
 				if err == io.EOF {
 					break
 				}
 				log.Println("err", err)
 			}
-
-			log.Println("command", cmd)
-			if err = respond(cmd, c); err != nil {
-				log.Print("err write:", err)
-			}
+			respond(cmd, c)
 		}
 	}
-
 }
