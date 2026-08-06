@@ -90,14 +90,3 @@ $ ./redis_exporter -redis.addr redis://localhost:7379
 $ ./prometheus --web.enable-admin-api
 $ curl -X POST -g 'http://localhost:9090/api/v1/admin/tsdb/delete_series?match[]={instance="localhost:9121"}'
 ```
-
-## Project Structure
-
-```
-.
-├── config/     # server configuration (host, port, eviction settings, AOF path)
-├── core/       # command evaluation, RESP encoding, storage, eviction, AOF
-├── server/     # TCP server (async and sync implementations)
-├── storm/set/  # load-testing utility
-└── main.go     # entrypoint
-```
